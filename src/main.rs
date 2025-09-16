@@ -1,36 +1,7 @@
-use clap::{Parser, Subcommand};
-
-#[derive(Parser, Debug)]
-struct Args {
-    #[command(subcommand)]
-    command: Command,
-}
-
-#[derive(Subcommand, Debug)]
-enum Command {
-    Init,
-    Build,
-    Serve,
-}
+use clap::Parser;
 
 fn main() {
-    let args = Args::parse();
+    let args = ssg::cli::Args::parse();
 
-    match args.command {
-        Command::Init => init(),
-        Command::Build => build(),
-        Command::Serve => serve(),
-    }
-}
-
-fn init() {
-    println!("init");
-}
-
-fn build() {
-    println!("build");
-}
-
-fn serve() {
-    println!("serve");
+    ssg::run(args);
 }
