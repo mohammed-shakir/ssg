@@ -9,6 +9,8 @@ walkdir = "2.5.0"
 serde = { version = "1", features = ["derive"] }
 toml = "0.9"
 serde_yaml = "0.9.34"
+pulldown-cmark = "0.13.0"
+ammonia = "4.1.2"
 
 [dev-dependencies]
 tempfile = "3.22.0"
