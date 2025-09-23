@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{% block title %}{{ page.title }} — {{ site.title }}{% endblock title %}</title>
+  {% block head %}{% endblock head %}
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="{{ site.base_url }}">{{ site.title }}</a>
+      {% block nav %}{% endblock nav %}
+    </nav>
+  </header>
+
+  <main id="content">{% block content %}{% endblock content %}</main>
+
+  <footer>
+    {% block footer %}
+      {% if site.author %}&copy; {{ site.author }}{% endif %}
+    {% endblock footer %}
+  </footer>
+</body>
+</html>

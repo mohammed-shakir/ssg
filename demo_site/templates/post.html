@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page.title }} — {{ site.title }}{% endblock title %}
+
+{% block content %}
+<article class="post">
+  <h1>{{ page.title }}</h1>
+  {% if page.date %}<time datetime="{{ page.date }}">{{ page.date }}</time>{% endif %}
+  <div class="body">{{ page.content | safe }}</div> {# content already sanitized in Rust #}
+  {% if page.tags | length > 0 %}
+    <ul class="tags">
+      {% for t in page.tags %}<li>{{ t }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+</article>
+{% endblock content %}
