@@ -12,10 +12,7 @@ use crate::{
     routing::{copy_static_assets, out_path_for},
     templates::Templates,
 };
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{fs, path::Path};
 
 pub fn run(args: Args) {
     match args.action {
