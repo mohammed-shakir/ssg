@@ -2,13 +2,14 @@ pub mod cli;
 pub mod config;
 pub mod content;
 pub mod render;
+pub mod routing;
 pub mod templates;
 
 use crate::{
     cli::{Action, Args},
     config::{SiteConfig, load_config},
     content::{PageMeta, collect_markdown_files, load_document},
-    // import Templates from templates module
+    routing::{copy_static_assets, out_path_for},
     templates::Templates,
 };
 use std::{
@@ -64,9 +65,7 @@ fn build(src: &Path, out: &Path) {
             }
         };
 
-        let rel = md.strip_prefix(&cfg.src_dir).unwrap_or(&md);
-        let mut out_path: PathBuf = cfg.out_dir.join(rel);
-        out_path.set_extension("html");
+        let out_path = out_path_for(&cfg.src_dir, &cfg.out_dir, &md, &doc);
 
         if let Some(parent) = out_path.parent() {
             let _ = fs::create_dir_all(parent);
@@ -74,6 +73,10 @@ fn build(src: &Path, out: &Path) {
         if let Err(e) = fs::write(&out_path, html) {
             eprintln!("write {}: {e}", out_path.display());
         }
+    }
+
+    if let Err(e) = copy_static_assets(&cfg.src_dir, &cfg.out_dir) {
+        eprintln!("assets: {e}");
     }
 }
 
