@@ -59,7 +59,6 @@ pub struct Document<M> {
 }
 
 fn split_front_matter(text: &str) -> io::Result<(Option<(FrontMatterFormat, String)>, String)> {
-    // keep an owned buffer so any &str slices outlive the normalizations
     let mut buf = text.to_owned();
 
     if buf.starts_with('\u{FEFF}') {
@@ -232,7 +231,6 @@ Body here.\n",
     fn invalid_front_matter_errors() {
         let dir = tempdir().unwrap();
         let f = dir.path().join("bad.md");
-        // Broken YAML (missing colon)
         fs::write(&f, "---\n title Hello\n---\nbody").unwrap();
 
         let err = load_document::<PageMeta>(&f).unwrap_err();

@@ -123,3 +123,67 @@ pub fn url_for_out_path(out_root: &Path, out_path: &Path) -> String {
         format!("/{}", rel.to_string_lossy().replace('\\', "/"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::content::{Document, PageMeta};
+
+    #[test]
+    fn slugify_basic() {
+        assert_eq!(slugify("My Post!"), "my-post");
+        assert_eq!(slugify("   spaces   "), "spaces");
+        assert_eq!(slugify(""), "untitled");
+    }
+
+    #[test]
+    fn out_path_for_index_and_post() {
+        let src = Path::new("/s");
+        let out = Path::new("/o");
+
+        let idx = Path::new("/s/index.md");
+        let doc_index = Document::<PageMeta> {
+            path: idx.into(),
+            front_matter: None,
+            body: String::new(),
+        };
+        let p = out_path_for(src, out, idx, &doc_index);
+        assert_eq!(p, Path::new("/o/index.html"));
+
+        let post = Path::new("/s/posts/first.md");
+        let doc_post = Document::<PageMeta> {
+            path: post.into(),
+            front_matter: None,
+            body: String::new(),
+        };
+        let p2 = out_path_for(src, out, post, &doc_post);
+        assert_eq!(p2, Path::new("/o/posts/first/index.html"));
+
+        let with_slug = Document::<PageMeta> {
+            path: post.into(),
+            front_matter: Some(PageMeta {
+                slug: Some("custom-slug".into()),
+                ..Default::default()
+            }),
+            body: String::new(),
+        };
+        let p3 = out_path_for(src, out, post, &with_slug);
+        assert_eq!(p3, Path::new("/o/posts/custom-slug/index.html"));
+    }
+
+    #[test]
+    fn url_for_out_path_index_rules() {
+        assert_eq!(
+            url_for_out_path(Path::new("/o"), Path::new("/o/index.html")),
+            "/"
+        );
+        assert_eq!(
+            url_for_out_path(Path::new("/o"), Path::new("/o/posts/first/index.html")),
+            "/posts/first/"
+        );
+        assert_eq!(
+            url_for_out_path(Path::new("/o"), Path::new("/o/raw.html")),
+            "/raw.html"
+        );
+    }
+}

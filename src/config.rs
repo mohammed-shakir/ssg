@@ -43,7 +43,6 @@ pub fn load_config<P: AsRef<Path>>(root: P) -> io::Result<SiteConfig> {
 
     let text = fs::read_to_string(&path)?;
 
-    // parse the file, layering on defaults
     let mut config: SiteConfig =
         toml::from_str(&text).map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
 
@@ -89,9 +88,9 @@ mod tests {
 
         let cfg = load_config(dir.path()).unwrap();
         assert_eq!(cfg.title, "My Blog");
-        assert_eq!(cfg.theme, "default"); // came from Default
-        assert!(cfg.src_dir.ends_with("content")); // resolved relative to root
-        assert!(cfg.out_dir.ends_with("out")); // defaulted + resolved
+        assert_eq!(cfg.theme, "default");
+        assert!(cfg.src_dir.ends_with("content"));
+        assert!(cfg.out_dir.ends_with("out"));
     }
 
     #[test]
