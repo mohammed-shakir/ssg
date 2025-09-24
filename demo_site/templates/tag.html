@@ -1,0 +1,19 @@
+{# demo_site/templates/tag.html #}
+{% extends "base.html" %}
+
+{% block title %}{{ tag.name }} — {{ site.title }}{% endblock title %}
+
+{% block content %}
+<h1>Tag: {{ tag.name }}</h1>
+<ul>
+  {% for p in tag.pages %}
+    <li><a href="{{ p.url }}">{{ p.title }}</a></li>
+  {% endfor %}
+</ul>
+
+<nav class="pager">
+  {% if tag.pagination.prev_url %}<a href="{{ tag.pagination.prev_url }}">Prev</a>{% endif %}
+  <span>{{ tag.pagination.current }} / {{ tag.pagination.total }}</span>
+  {% if tag.pagination.next_url %}<a href="{{ tag.pagination.next_url }}">Next</a>{% endif %}
+</nav>
+{% endblock content %}

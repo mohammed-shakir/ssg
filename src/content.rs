@@ -41,6 +41,7 @@ enum FrontMatterFormat {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct PageMeta {
     pub title: Option<String>,
     pub date: Option<String>,
@@ -58,59 +59,65 @@ pub struct Document<M> {
 }
 
 fn split_front_matter(text: &str) -> io::Result<(Option<(FrontMatterFormat, String)>, String)> {
-    let mut text = text.to_owned();
+    // keep an owned buffer so any &str slices outlive the normalizations
+    let mut buf = text.to_owned();
 
-    if text.starts_with('\u{FEFF}') {
-        text = text.trim_start_matches('\u{FEFF}').to_string();
+    if buf.starts_with('\u{FEFF}') {
+        buf = buf.trim_start_matches('\u{FEFF}').to_string();
     }
-    if text.contains('\r') {
-        text = text.replace("\r\n", "\n").replace('\r', "\n");
+    if buf.contains('\r') {
+        buf = buf.replace("\r\n", "\n").replace('\r', "\n");
     }
 
-    // check foor yaml front matter
-    if let Some(rest) = text.strip_prefix("---\n") {
-        let Some(end) = rest
-            .find("\n---\n")
-            .or_else(|| rest.strip_suffix("\n---").map(|s| s.len()))
-        else {
-            return Err(io::Error::new(
-                ErrorKind::InvalidData,
-                "Unclosed YAML front matter (---)",
-            ));
-        };
-        let (fm, body) = rest.split_at(end);
-        // Skip the closing fence line (account for presence/absence of trailing \n)
-        let body = body
-            .strip_prefix("\n---\n")
-            .or_else(|| body.strip_prefix("\n---"))
-            .unwrap_or(body);
-        return Ok((
-            Some((FrontMatterFormat::Yaml, fm.to_string())),
-            body.to_string(),
+    let s: &str = &buf;
+
+    let first_nonblank = s.lines().position(|ln| !ln.trim().is_empty()).unwrap_or(0);
+    let mut iter = s.lines();
+    for _ in 0..first_nonblank {
+        iter.next();
+    }
+
+    let Some(first) = iter.next() else {
+        return Ok((None, s.to_string()));
+    };
+
+    let (fmt, fence) = if first.trim() == "---" {
+        (FrontMatterFormat::Yaml, "---")
+    } else if first.trim() == "+++" {
+        (FrontMatterFormat::Toml, "+++")
+    } else {
+        return Ok((None, s.to_string()));
+    };
+
+    let mut fm = String::new();
+    let mut body = String::new();
+    let mut in_fm = true;
+
+    for line in iter {
+        if in_fm && line.trim() == fence {
+            in_fm = false;
+            continue;
+        }
+        if in_fm {
+            fm.push_str(line);
+            fm.push('\n');
+        } else {
+            body.push_str(line);
+            body.push('\n');
+        }
+    }
+
+    if in_fm {
+        return Err(io::Error::new(
+            ErrorKind::InvalidData,
+            match fmt {
+                FrontMatterFormat::Yaml => "Unclosed YAML front matter (---)",
+                FrontMatterFormat::Toml => "Unclosed TOML front matter (+++)",
+            },
         ));
-    } else if let Some(rest) = text.strip_prefix("+++\n") {
-        // check for toml front matter
-        let Some(end) = rest
-            .find("\n+++\n")
-            .or_else(|| rest.strip_suffix("\n+++").map(|s| s.len()))
-        else {
-            return Err(io::Error::new(
-                ErrorKind::InvalidData,
-                "Unclosed TOML front matter (+++)",
-            ));
-        };
-        let (fm, body) = rest.split_at(end);
-        let body = body
-            .strip_prefix("\n+++\n")
-            .or_else(|| body.strip_prefix("\n+++"))
-            .unwrap_or(body);
-        return Ok((
-            Some((FrontMatterFormat::Toml, fm.to_string())),
-            body.to_string(),
-        ));
     }
 
-    Ok((None, text))
+    Ok((Some((fmt, fm)), body))
 }
 
 pub fn load_document<M: DeserializeOwned>(path: impl AsRef<Path>) -> io::Result<Document<M>> {

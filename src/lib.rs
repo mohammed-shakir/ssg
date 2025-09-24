@@ -1,6 +1,7 @@
 pub mod cli;
 pub mod config;
 pub mod content;
+pub mod devserver;
 pub mod paginate;
 pub mod render;
 pub mod routing;
@@ -20,7 +21,7 @@ use std::{fs, path::Path};
 pub fn run(args: Args) {
     match args.action {
         Action::Build { src, out } => build(&src, &out),
-        Action::Serve { out } => serve(&out),
+        Action::Serve { src, out } => devserver::serve(&src, &out),
         Action::Clean { out } => clean(&out),
     }
 }
@@ -88,10 +89,6 @@ fn build(src: &Path, out: &Path) {
     if let Err(e) = write_tag_pages(&templates, &cfg, &cfg.out_dir, &summaries) {
         eprintln!("tags: {e}");
     }
-}
-
-fn serve(out: &Path) {
-    println!("Serve from {:?}", out);
 }
 
 fn clean(out: &Path) {

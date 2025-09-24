@@ -19,6 +19,9 @@ pub enum Action {
         out: PathBuf,
     },
     Serve {
+        #[arg(short, long, default_value = "src")]
+        src: PathBuf,
+
         #[arg(short, long, default_value = "dist")]
         out: PathBuf,
     },
