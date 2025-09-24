@@ -1,6 +1,7 @@
 pub mod cli;
 pub mod config;
 pub mod content;
+pub mod paginate;
 pub mod render;
 pub mod routing;
 pub mod taxonomy;

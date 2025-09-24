@@ -4,6 +4,7 @@ use std::{collections::HashMap, fs, io, path::Path};
 use crate::{
     config::SiteConfig,
     content::Document,
+    paginate::{PageInfo, neighbors, paginate},
     routing::{slugify, url_for_out_path},
     templates::Templates,
 };
@@ -13,6 +14,14 @@ pub struct PageSummary {
     pub title: String,
     pub url: String,
     pub tags: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct PaginationView {
+    current: usize,
+    total: usize,
+    prev_url: Option<String>,
+    next_url: Option<String>,
 }
 
 pub fn group_by_tag(pages: &[PageSummary]) -> HashMap<String, Vec<&PageSummary>> {
@@ -45,6 +54,7 @@ pub fn write_tag_pages(
         name: &'a str,
         pages: Vec<&'a PageSummary>,
         url: String,
+        pagination: PaginationView,
     }
     #[derive(Serialize)]
     struct TagsIndex<'a> {
@@ -57,19 +67,51 @@ pub fn write_tag_pages(
         url: String,
     }
 
+    const PAGE_SIZE: usize = 10;
+
     for (tag_name, items) in groups.iter() {
         let slug = slugify(tag_name);
-        let out_path = out_root.join("tags").join(&slug).join("index.html");
-        if let Some(parent) = out_path.parent() {
-            fs::create_dir_all(parent)?;
+        let chunks = paginate(items, PAGE_SIZE);
+        let total_pages = chunks.len();
+
+        for (i, chunk) in chunks.iter().enumerate() {
+            let info = PageInfo {
+                index: i,
+                total_pages,
+            };
+            let (prev, next) = neighbors(info);
+
+            let out_path = if i == 0 {
+                out_root.join("tags").join(&slug).join("index.html")
+            } else {
+                out_root
+                    .join("tags")
+                    .join(&slug)
+                    .join("page")
+                    .join((i + 1).to_string())
+                    .join("index.html")
+            };
+            if let Some(parent) = out_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+
+            let pagination = PaginationView {
+                current: i + 1,
+                total: total_pages,
+                prev_url: prev.map(|p| tag_page_url(&slug, p)),
+                next_url: next.map(|n| tag_page_url(&slug, n)),
+            };
+
+            let tag_vm = TagPage {
+                name: tag_name,
+                pages: chunk.to_vec(),
+                url: tag_page_url(&slug, i),
+                pagination,
+            };
+
+            let html = render_tag(templates, cfg, &tag_vm)?;
+            fs::write(out_path, html)?;
         }
-        let tag_vm = TagPage {
-            name: tag_name,
-            pages: items.clone(),
-            url: format!("/tags/{}/", slug),
-        };
-        let html = render_tag(templates, cfg, &tag_vm)?;
-        fs::write(out_path, html)?;
     }
 
     let mut all: Vec<_> = groups
@@ -127,6 +169,14 @@ pub fn summarize<M>(
         title: title.to_string(),
         url: url_for_out_path(out_root, out_path),
         tags: tags.to_vec(),
+    }
+}
+
+fn tag_page_url(slug: &str, idx: usize) -> String {
+    if idx == 0 {
+        format!("/tags/{}/", slug)
+    } else {
+        format!("/tags/{}/page/{}/", slug, idx + 1)
     }
 }
 
