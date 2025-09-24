@@ -3,6 +3,7 @@ pub mod config;
 pub mod content;
 pub mod render;
 pub mod routing;
+pub mod taxonomy;
 pub mod templates;
 
 use crate::{
@@ -10,6 +11,7 @@ use crate::{
     config::{SiteConfig, load_config},
     content::{PageMeta, collect_markdown_files, load_document},
     routing::{copy_static_assets, out_path_for},
+    taxonomy::{PageSummary, summarize, write_tag_pages},
     templates::Templates,
 };
 use std::{fs, path::Path};
@@ -44,6 +46,8 @@ fn build(src: &Path, out: &Path) {
         }
     };
 
+    let mut summaries: Vec<PageSummary> = Vec::new();
+
     let md_files = collect_markdown_files(&cfg.src_dir);
     for md in md_files {
         let doc = match load_document::<PageMeta>(&md) {
@@ -63,17 +67,25 @@ fn build(src: &Path, out: &Path) {
         };
 
         let out_path = out_path_for(&cfg.src_dir, &cfg.out_dir, &md, &doc);
-
         if let Some(parent) = out_path.parent() {
             let _ = fs::create_dir_all(parent);
         }
-        if let Err(e) = fs::write(&out_path, html) {
+        if let Err(e) = fs::write(&out_path, &html) {
             eprintln!("write {}: {e}", out_path.display());
+            continue;
         }
+
+        let meta = doc.front_matter.clone().unwrap_or_default();
+        let title = meta.title.as_deref().unwrap_or("Untitled");
+        summaries.push(summarize(&doc, &cfg.out_dir, &out_path, &meta.tags, title));
     }
 
     if let Err(e) = copy_static_assets(&cfg.src_dir, &cfg.out_dir) {
         eprintln!("assets: {e}");
+    }
+
+    if let Err(e) = write_tag_pages(&templates, &cfg, &cfg.out_dir, &summaries) {
+        eprintln!("tags: {e}");
     }
 }
 

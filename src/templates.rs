@@ -80,6 +80,26 @@ impl Templates {
     pub fn full_reload(&mut self) -> io::Result<()> {
         self.tera.full_reload().map_err(map_tera_err)
     }
+
+    pub fn render_with<T: serde::Serialize>(
+        &self,
+        template: &str,
+        site: &crate::config::SiteConfig,
+        key: &str,
+        data: &T,
+    ) -> std::io::Result<String> {
+        use tera::Context;
+        let mut ctx = Context::new();
+        ctx.insert("site", site);
+        ctx.insert(key, data);
+        self.tera
+            .render(template, &ctx)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+    }
+
+    pub fn tera(&self) -> &tera::Tera {
+        &self.tera
+    }
 }
 
 fn map_tera_err(err: tera::Error) -> io::Error {

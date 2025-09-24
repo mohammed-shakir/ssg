@@ -101,3 +101,25 @@ pub fn copy_static_assets(src_root: &Path, out_root: &Path) -> io::Result<()> {
     }
     Ok(())
 }
+
+pub fn url_for_out_path(out_root: &Path, out_path: &Path) -> String {
+    let rel: PathBuf = out_path
+        .strip_prefix(out_root)
+        .unwrap_or(out_path)
+        .to_owned();
+    if rel
+        .file_name()
+        .and_then(|n| n.to_str())
+        .is_some_and(|n| n.eq_ignore_ascii_case("index.html"))
+    {
+        let dir = rel.parent().unwrap_or(Path::new(""));
+        let s = dir.to_string_lossy();
+        if s.is_empty() {
+            "/".to_string()
+        } else {
+            format!("/{}/", s.replace('\\', "/"))
+        }
+    } else {
+        format!("/{}", rel.to_string_lossy().replace('\\', "/"))
+    }
+}
